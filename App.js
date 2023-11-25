@@ -122,3 +122,239 @@ function App() {
 }
 
 export default App;
+
+# Crear un recurso de Azure OpenAI Service en Azure
+az openai account create \
+    --name "mi-recurso-openai" \
+    --resource-group "mi-grupo-de-recursos" \
+    --sku "dalle2.1" \
+    --location "mi-ubicacion"
+
+// azure-image-generation.js
+const generateImage = async (text) => {
+  const subscriptionKey = 'tu-clave-de-suscripcion';  // Reemplaza con tu clave de suscripción de Azure OpenAI
+  const endpoint = 'tu-endpoint';  // Reemplaza con el endpoint de tu recurso de Azure OpenAI
+
+  const prompt = text;
+
+  const response = await fetch(`${endpoint}/v1/models/dall-e-generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${subscriptionKey}`,
+    },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Error al generar la imagen');
+  }
+
+  return response.json();
+};
+
+export default generateImage;
+
+// App.js
+import React, { useState } from 'react';
+import generateImage from './azure-image-generation';
+
+function App() {
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [generationResults, setGenerationResults] = useState(null);
+
+  const handleImageGeneration = async () => {
+    try {
+      setLoading(true);
+      const results = await generateImage(text);
+      setGenerationResults(results);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const DisplayResults = () => {
+    if (!generationResults) {
+      return null;
+    }
+
+    return (
+      <div>
+        <h2>Resultados de la Generación de Imágenes:</h2>
+        <img src={generationResults?.data?.[0]} alt="Imagen generada" />
+        <p>Texto de entrada: {text}</p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="app">
+      <h1>Aplicación de Generación de Imágenes</h1>
+      <input
+        type="text"
+        placeholder="Introduce el texto para generar la imagen"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <button onClick={handleImageGeneration} disabled={loading}>
+        {loading ? 'Generando...' : 'Generar Imagen'}
+      </button>
+      <DisplayResults />
+    </div>
+  );
+}
+
+export default App;
+
+// App.js
+import React, { useState } from 'react';
+import generateImage from './azure-image-generation';
+
+function App() {
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [generationResults, setGenerationResults] = useState(null);
+
+  const handleImageGeneration = async () => {
+    try {
+      setLoading(true);
+      const results = await generateImage(text);
+      setGenerationResults(results);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const DisplayResults = () => {
+    if (!generationResults) {
+      return null;
+    }
+
+    return (
+      <div>
+        <h2>Resultados de la Generación de Imágenes:</h2>
+        <img src={generationResults?.data?.[0]} alt="Imagen generada" />
+        <p>Texto de entrada: {text}</p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="app">
+      <h1>Aplicación de Generación de Imágenes</h1>
+      <input
+        type="text"
+        placeholder="Introduce el texto para generar la imagen"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <button onClick={handleImageGeneration} disabled={loading}>
+        {loading ? 'Generando...' : 'Generar Imagen'}
+      </button>
+      <DisplayResults />
+    </div>
+  );
+}
+
+export default App;
+
+// azure-image-generation.js
+const isConfigured = () => {
+  return process.env.REACT_APP_OPENAI_SUBSCRIPTION_KEY && process.env.REACT_APP_OPENAI_ENDPOINT;
+};
+
+// azure-image-analysis.js
+const isConfigured = () => {
+  return process.env.REACT_APP_AZURE_CV_SUBSCRIPTION_KEY && process.env.REACT_APP_AZURE_CV_ENDPOINT;
+};
+
+export { isConfigured };
+
+// App.js
+import React, { useState } from 'react';
+import generateImage from './azure-image-generation';
+import analyzeImage from './azure-image-analysis';
+import { isConfigured as isOpenAIConfigured } from './azure-image-generation';
+import { isConfigured as isAzureCVConfigured } from './azure-image-analysis';
+
+function App() {
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [generationResults, setGenerationResults] = useState(null);
+  const [warning, setWarning] = useState('');
+
+  const handleImageGeneration = async () => {
+    // Verificar la configuración de OpenAI antes de llamar a la función
+    if (!isOpenAIConfigured()) {
+      setWarning('La aplicación no está configurada correctamente. Consulte la documentación para obtener ayuda.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const results = await generateImage(text);
+      setGenerationResults(results);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resto del código...
+
+  return (
+    <div className="app">
+      <h1>Aplicación de Generación de Imágenes</h1>
+      {warning && <p className="warning">{warning}</p>}
+      {/* Resto del código... */}
+    </div>
+  );
+}
+
+export default App;
+
+
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build
+      run: npm run build
+
+    - name: Deploy to Azure Static Web Apps
+      uses: azure/static-web-apps-deploy@v1
+      with:
+        azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        action: 'upload'
+        app_location: 'build'
+        output_location: ''
+
+git add .
+git commit -m "Configurar secretos y modificar flujo de trabajo"
+git push origin main
